@@ -1,0 +1,7 @@
+export const statusTranslation = {
+  PENDIENTE: "PENDIENTE",
+  "EN ESPERA": "EN ESPERA",
+  "EN PROGRESO": "EN PROGRESO",
+  "EN REVISIÓN": "EN REVISIÓN",
+  COMPLETADO: "COMPLETADO",
+};
