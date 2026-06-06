@@ -12,6 +12,14 @@
     "build": "pnpm --filter frontend build",
     "lint": "pnpm --filter frontend lint",
     "typecheck": "pnpm --filter backend typecheck",
+    "prisma:generate": "pnpm --filter backend prisma:generate",
+    "db:push": "pnpm --filter backend db:push",
+    "db:seed": "pnpm --filter backend db:seed",
     "audit": "pnpm audit --audit-level moderate"
+  },
+  "pnpm": {
+    "overrides": {
+      "@hono/node-server": "1.19.13"
+    }
   }
 }

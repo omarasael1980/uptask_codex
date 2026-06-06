@@ -1,35 +1,30 @@
-import {
-  type Request,
-  type Response,
-  type NextFunction,
-  request,
-} from "express";
-import Project, { IProject } from "../models/Project";
-declare global {
-  namespace Express {
-    interface Request {
-      project: IProject;
-    }
-  }
-}
+import { type Request, type Response, type NextFunction } from "express";
+import { prisma } from "../config/prisma";
+
 export const validateProjectExists = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { projectId } = req.params;
-    const project = await Project.findById(projectId).populate("tasks");
-    // console.log("project", project);
+    const projectId = req.params.projectId as string;
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        tasks: true,
+        team: { include: { user: true } },
+      },
+    });
+
     if (!project) {
-      const error = new Error("Proyecto no encontrado");
       res.status(404).json({
-        msg: error.message,
+        msg: "Proyecto no encontrado",
         title: "El proyecto no existe",
         error: true,
       });
       return;
     }
+
     req.project = project;
     next();
   } catch (error) {

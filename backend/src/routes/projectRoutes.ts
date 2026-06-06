@@ -24,7 +24,7 @@ router.get("/", authenticate, ProjectController.getAllProjects);
 router.get(
   "/:id",
   authenticate,
-  param("id").isMongoId().withMessage("El id del proyecto no es válido"),
+  param("id").isString().notEmpty().withMessage("El id del proyecto no es válido"),
   handleInputErrors,
   ProjectController.getProjectById
 );
@@ -52,7 +52,7 @@ router.post(
 router.put(
   "/:id",
   authenticate,
-  param("id").isMongoId().withMessage("El id del proyecto no es válido"),
+  param("id").isString().notEmpty().withMessage("El id del proyecto no es válido"),
   body("projectName")
     .notEmpty()
     .withMessage("El nombre del proyecto es requerido"),
@@ -70,7 +70,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
-  param("id").isMongoId().withMessage("El id del proyecto no es válido"),
+  param("id").isString().notEmpty().withMessage("El id del proyecto no es válido"),
 
   handleInputErrors,
   ProjectController.deleteProject
@@ -85,7 +85,7 @@ router.post(
   "/:projectId/tasks",
   authenticate,
   hasAuthorization,
-  param("projectId").isMongoId().withMessage("El id del proyecto no es válido"),
+  param("projectId").isString().notEmpty().withMessage("El id del proyecto no es válido"),
   body("name").notEmpty().withMessage("El nombre de la tarea es requerido"),
   body("description")
     .notEmpty()
@@ -98,7 +98,7 @@ router.post(
 router.get(
   "/:projectId/tasks",
   authenticate,
-  param("projectId").isMongoId().withMessage("El id del proyecto no es válido"),
+  param("projectId").isString().notEmpty().withMessage("El id del proyecto no es válido"),
   handleInputErrors,
 
   TaskController.getTasks
@@ -107,8 +107,8 @@ router.get(
 router.get(
   "/:projectId/tasks/:taskId",
   authenticate,
-  param("projectId").isMongoId().withMessage("El id del proyecto no es válido"),
-  param("taskId").isMongoId().withMessage("El id de la tarea no es válido"),
+  param("projectId").isString().notEmpty().withMessage("El id del proyecto no es válido"),
+  param("taskId").isString().notEmpty().withMessage("El id de la tarea no es válido"),
   handleInputErrors,
 
   TaskController.getTaskById
@@ -119,8 +119,8 @@ router.put(
 
   authenticate,
   hasAuthorization,
-  param("projectId").isMongoId().withMessage("El id del proyecto no es válido"),
-  param("taskId").isMongoId().withMessage("El id de la tarea no es válido"),
+  param("projectId").isString().notEmpty().withMessage("El id del proyecto no es válido"),
+  param("taskId").isString().notEmpty().withMessage("El id de la tarea no es válido"),
   body("name").notEmpty().withMessage("El nombre de la tarea es requerido"),
   body("description")
     .notEmpty()
@@ -134,8 +134,8 @@ router.delete(
   "/:projectId/tasks/:taskId",
   authenticate,
   hasAuthorization,
-  param("projectId").isMongoId().withMessage("El id del proyecto no es válido"),
-  param("taskId").isMongoId().withMessage("El id de la tarea no es válido"),
+  param("projectId").isString().notEmpty().withMessage("El id del proyecto no es válido"),
+  param("taskId").isString().notEmpty().withMessage("El id de la tarea no es válido"),
   handleInputErrors,
 
   TaskController.deleteTask
@@ -144,8 +144,8 @@ router.delete(
 router.post(
   "/:projectId/tasks/:taskId/status",
   authenticate,
-  param("projectId").isMongoId().withMessage("El id del proyecto no es válido"),
-  param("taskId").isMongoId().withMessage("El id de la tarea no es válido"),
+  param("projectId").isString().notEmpty().withMessage("El id del proyecto no es válido"),
+  param("taskId").isString().notEmpty().withMessage("El id de la tarea no es válido"),
   body("status").notEmpty().withMessage("El status de la tarea es requerido"),
   handleInputErrors,
 
@@ -166,7 +166,7 @@ router.post(
 router.post(
   "/:projectId/team",
   authenticate,
-  body("id").isMongoId().withMessage("El id del usuario no es válido"),
+  body("id").isString().notEmpty().withMessage("El id del usuario no es válido"),
   handleInputErrors,
   TeamMemberController.addMemberById
 );
@@ -180,7 +180,7 @@ router.get(
 router.delete(
   "/:projectId/team/:userId",
   authenticate,
-  param("userId").isMongoId().withMessage("El id del usuario no es válido"),
+  param("userId").isString().notEmpty().withMessage("El id del usuario no es válido"),
   handleInputErrors,
   TeamMemberController.removeMemberById
 );

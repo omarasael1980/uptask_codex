@@ -1,14 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import User from "../models/User";
+import { prisma } from "../config/prisma";
 import { verifyToken } from "../utils/jwt";
-import { IUser } from "../models/User";
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser;
-    }
-  }
-}
+
 export const authenticate = async (
   req: Request,
   res: Response,
@@ -25,20 +18,20 @@ export const authenticate = async (
   }
 
   const token = bearer.split(" ")[1];
-
   const isValid = verifyToken(token);
+
   if (typeof isValid === "object" && isValid.id) {
-    const user = await User.findById(isValid.id).select("-password");
+    const user = await prisma.user.findUnique({ where: { id: isValid.id } });
     if (user) {
       req.user = user;
       next();
-    } else {
-      res.status(401).json({
-        msg: "No autorizado",
-        title: "No autorizado",
-        error: true,
-      });
       return;
     }
   }
+
+  res.status(401).json({
+    msg: "No autorizado",
+    title: "No autorizado",
+    error: true,
+  });
 };

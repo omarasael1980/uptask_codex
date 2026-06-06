@@ -1,35 +1,31 @@
-import {
-  type Request,
-  type Response,
-  type NextFunction,
-  request,
-} from "express";
-import Task, { ITask } from "../models/Task";
-declare global {
-  namespace Express {
-    interface Request {
-      task: ITask;
-    }
-  }
-}
+import { type Request, type Response, type NextFunction } from "express";
+import { prisma } from "../config/prisma";
+
 export const validateTaskExists = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { taskId } = req.params;
-    const task = await Task.findById(taskId).populate("project");
-    // console.log("project", project);
+    const taskId = req.params.taskId as string;
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        project: true,
+        completedBy: { include: { user: true } },
+        notes: { include: { createdBy: true } },
+      },
+    });
+
     if (!task) {
-      const error = new Error("Tarea no encontrada");
       res.status(404).json({
-        msg: error.message,
+        msg: "Tarea no encontrada",
         title: "La Tarea no existe",
         error: true,
       });
       return;
     }
+
     req.task = task;
     next();
   } catch (error) {
@@ -46,7 +42,7 @@ export function taskBelongsToProject(
   res: Response,
   next: NextFunction
 ) {
-  if (req.task.project._id.toString() != req.project.id.toString()) {
+  if (req.task.projectId !== req.project.id) {
     res.status(404).json({
       msg: "La tarea no pertenece al proyecto",
       title: "Acción no permitida",
@@ -56,16 +52,15 @@ export function taskBelongsToProject(
   }
   next();
 }
+
 export function hasAuthorization(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
-  if (req.user._id.toString() !== req.project.manager.toString()) {
-    const error = new Error("Acción no permitida");
-
+  if (req.user.id !== req.project.managerId) {
     res.status(401).json({
-      msg: error.message,
+      msg: "Acción no permitida",
       title: "No autorizado",
       error: true,
     });

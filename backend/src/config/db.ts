@@ -1,16 +1,12 @@
-import mongoose from "mongoose";
 import colors from "colors";
+import { prisma } from "./prisma";
 
 export const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.DATABASE_URL);
-    console.log(
-      colors.magenta.bold(
-        `MongoDB Connected: ${conn.connection.host}:${conn.connection.port}`
-      )
-    );
+    await prisma.$connect();
+    console.log(colors.magenta.bold("PostgreSQL connected via Prisma"));
   } catch (error) {
-    console.error(colors.bgRed(`Error: No se pudo conectar a MongoDB`));
+    console.error(colors.bgRed("Error: No se pudo conectar a PostgreSQL"));
     console.error(colors.red(error));
     process.exit(1);
   }

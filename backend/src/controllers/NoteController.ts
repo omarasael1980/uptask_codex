@@ -1,24 +1,24 @@
 import type { Request, Response } from "express";
-import Note, { INote } from "../models/Note";
-import { Types } from "mongoose";
+import { prisma } from "../config/prisma";
+import { serializeNote } from "../utils/serializers";
+
 type NoteParams = {
   noteId: string;
 };
+
 //region createNote
-const createNote = async (req: Request<{}, {}, INote>, res: Response) => {
+const createNote = async (req: Request, res: Response) => {
   try {
     const { content } = req.body;
-    const createdBy = req.user._id;
-    const task = req.task._id;
 
-    const note = new Note({
-      content,
-      createdBy,
-      task,
+    await prisma.note.create({
+      data: {
+        content,
+        createdById: req.user.id,
+        taskId: req.task.id,
+      },
     });
 
-    req.task.notes.push(note.id);
-    await Promise.allSettled([note.save(), req.task.save()]);
     res.status(201).json({
       msg: "Nota creada correctamente",
       title: "Nota creada",
@@ -32,11 +32,16 @@ const createNote = async (req: Request<{}, {}, INote>, res: Response) => {
     });
   }
 };
+
 //region getTasksNotes
 const getTasksNotes = async (req: Request, res: Response) => {
   try {
-    const notes = await Note.find({ task: req.task._id });
-    res.status(200).json(notes);
+    const notes = await prisma.note.findMany({
+      where: { taskId: req.task.id },
+      include: { createdBy: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.status(200).json(notes.map(serializeNote));
   } catch (error) {
     res.status(500).json({
       msg: error.message,
@@ -52,27 +57,24 @@ const deleteNote = async (
   res: Response
 ): Promise<void> => {
   try {
-    const noteId = new Types.ObjectId(req.params.noteId);
-    const note = await Note.findById(noteId);
+    const note = await prisma.note.findUnique({
+      where: { id: req.params.noteId },
+    });
 
     if (!note) {
       res.status(404).json({ msg: "Nota no encontrada", error: true });
       return;
     }
-    console.log("1", note.createdBy.toString());
-    console.log("2", req.user);
-    if (note.createdBy.toString() !== req.user.id.toString()) {
+
+    if (note.createdById !== req.user.id) {
       res.status(401).json({
         msg: "No tienes permisos para eliminar esta nota",
         error: true,
       });
       return;
     }
-    req.task.notes = req.task.notes.filter(
-      (note) => note.toString() !== noteId.toString()
-    );
 
-    await Promise.allSettled([req.task.save(), note.deleteOne()]);
+    await prisma.note.delete({ where: { id: note.id } });
 
     res.status(200).json({ msg: "Nota eliminada correctamente", error: false });
   } catch (error) {

@@ -1,27 +1,32 @@
 import { Request, Response } from "express";
-import User from "../models/User";
+import { prisma } from "../config/prisma";
+import { serializeTask } from "../utils/serializers";
 
-import Task from "../models/Task";
+const taskInclude = {
+  project: true,
+  completedBy: { include: { user: true }, orderBy: { createdAt: "asc" as const } },
+  notes: {
+    include: { createdBy: true },
+    orderBy: { createdAt: "desc" as const },
+  },
+} as const;
+
 export class TaskController {
-  //region TASKS
   //region POST createTask
   static createTask = async (req: Request, res: Response) => {
     try {
       let { name, description } = req.body;
-
-      //preparando strings
       name = name.trim().toUpperCase();
       description = description.trim().toUpperCase();
 
-      const project = req.project;
-      const task = new Task({
-        name,
-        description,
-        project: project._id,
+      await prisma.task.create({
+        data: {
+          name,
+          description,
+          projectId: req.project.id,
+        },
       });
-      project.tasks.push(task.id);
 
-      await Promise.allSettled([project.save(), task.save()]);
       res.status(201).json({
         msg: "Tarea creada correctamente",
         title: "Tarea creada",
@@ -39,13 +44,14 @@ export class TaskController {
   //region GET getTasks
   static getTasks = async (req: Request, res: Response) => {
     try {
-      const project = req.project;
+      const tasks = await prisma.task.findMany({
+        where: { projectId: req.project.id },
+        include: taskInclude,
+        orderBy: { createdAt: "desc" },
+      });
 
-      const tasks = await Task.find({ project: project.id }).populate(
-        "project"
-      );
       res.status(200).json({
-        msg: tasks,
+        msg: tasks.map(serializeTask),
         title: "Tareas",
         error: false,
       });
@@ -57,18 +63,17 @@ export class TaskController {
       });
     }
   };
+
   //region GET getTaskById
   static getTaskById = async (req: Request, res: Response) => {
     try {
-      const task = await Task.findById(req.task._id)
-        .populate({ path: "completedBy.user", select: "id name email" })
-        .populate({
-          path: "notes",
-          populate: { path: "createdBy", select: "id email name" },
-        });
+      const task = await prisma.task.findUnique({
+        where: { id: req.task.id },
+        include: taskInclude,
+      });
 
       res.status(200).json({
-        msg: task,
+        msg: serializeTask(task),
         title: "Tarea",
         error: false,
       });
@@ -78,9 +83,9 @@ export class TaskController {
         title: "Error al obtener tarea",
         error: true,
       });
-      return;
     }
   };
+
   //region PUT updateTask
   static updateTask = async (req: Request, res: Response) => {
     try {
@@ -88,12 +93,14 @@ export class TaskController {
       name = name.trim().toUpperCase();
       description = description.trim().toUpperCase();
 
-      req.task.name = name;
-      req.task.description = description;
-      req.task.save();
+      const task = await prisma.task.update({
+        where: { id: req.task.id },
+        data: { name, description },
+        include: taskInclude,
+      });
 
       res.status(200).json({
-        msg: req.task,
+        msg: serializeTask(task),
         title: "Tarea actualizada",
         error: false,
       });
@@ -103,16 +110,13 @@ export class TaskController {
         title: "Error al actualizar tarea",
         error: true,
       });
-      return;
     }
   };
+
   //region DELETE deleteTask
   static deleteTask = async (req: Request, res: Response) => {
     try {
-      req.project.tasks = req.project.tasks.filter(
-        (taskId) => taskId.toString() !== req.task.toString()
-      );
-      await Promise.allSettled([req.project.save(), req.task.deleteOne()]);
+      await prisma.task.delete({ where: { id: req.task.id } });
 
       res.status(200).json({
         msg: "Eliminación exitosa",
@@ -127,21 +131,30 @@ export class TaskController {
       });
     }
   };
+
   //region patchTask
   static updateStatusTask = async (req: Request, res: Response) => {
     try {
-      let { status } = req.body;
-      status = status.trim().toUpperCase();
-      req.task.status = status;
-      const data = {
-        user: req.user.id,
-        status,
-      };
+      const status = req.body.status.trim().toUpperCase();
 
-      req.task.completedBy.push(data);
-      const updatedTask = await req.task.save();
+      const updatedTask = await prisma.$transaction(async (tx) => {
+        await tx.taskStatusLog.create({
+          data: {
+            taskId: req.task.id,
+            userId: req.user.id,
+            status,
+          },
+        });
+
+        return tx.task.update({
+          where: { id: req.task.id },
+          data: { status },
+          include: taskInclude,
+        });
+      });
+
       res.status(200).json({
-        msg: updatedTask,
+        msg: serializeTask(updatedTask),
         title: "Tarea actualizada",
         error: false,
       });
@@ -151,7 +164,6 @@ export class TaskController {
         title: "Error al actualizar tarea",
         error: true,
       });
-      return;
     }
   };
 }

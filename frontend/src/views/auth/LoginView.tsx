@@ -28,6 +28,7 @@ export default function LoginView() {
         toast.success(data);
         navigate("/");
       } else {
+        console.log(data);
         toast.error(data);
       }
 

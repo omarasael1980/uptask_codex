@@ -6,5 +6,7 @@ minimumReleaseAge: 1440
 strictDepBuilds: true
 onlyBuiltDependencies:
   - "@swc/core"
+  - "@prisma/engines"
   - "bcrypt"
   - "esbuild"
+  - "prisma"

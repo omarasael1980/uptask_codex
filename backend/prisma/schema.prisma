@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  confirmed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  managedProjects Project[]       @relation("ProjectManager")
+  memberships     ProjectMember[]
+  completedTasks  TaskStatusLog[]
+  notes           Note[]
+  tokens          Token[]
+
+  @@map("users")
+}
+
+model Project {
+  id                 String   @id @default(cuid())
+  projectName        String
+  clientName         String
+  projectDescription String
+  managerId          String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  manager User            @relation("ProjectManager", fields: [managerId], references: [id], onDelete: Cascade)
+  team    ProjectMember[]
+  tasks   Task[]
+
+  @@index([managerId])
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  status      String   @default("PENDIENTE")
+  projectId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  completedBy TaskStatusLog[]
+  notes       Note[]
+
+  @@index([projectId])
+  @@map("tasks")
+}
+
+model TaskStatusLog {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String?
+  status    String
+  createdAt DateTime @default(now())
+
+  task Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("task_status_logs")
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  content     String
+  createdById String
+  taskId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  task      Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdById])
+  @@map("notes")
+}
+
+model Token {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime @default(dbgenerated("NOW() + INTERVAL '10 minutes'"))
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("tokens")
+}

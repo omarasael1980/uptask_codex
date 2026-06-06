@@ -1,57 +1,22 @@
 import type { Request, Response } from "express";
-import User from "../models/User";
-import Project from "../models/Project";
+import { prisma } from "../config/prisma";
+import { serializePublicUser } from "../utils/serializers";
 
 export class TeamMemberController {
   //region findMemberByEmail
   static findMemberByEmail = async (req: Request, res: Response) => {
     try {
-      const { email } = req.body;
-
-      // Find user
-      const user = await User.findOne({ email }).select("id email name");
-      if (!user) {
-        const error = new Error("Usuario No Encontrado");
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      res
-        .status(200)
-        .json({ title: "Usuario Encontrado", msg: user, error: false });
-    } catch (error) {
-      res.status(500).send({
-        msg: error.message,
-        title: "Error al validar el usuario",
-        error: true,
-      });
-    }
-  };
-  //region Add a member to a team
-  static addMemberById = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.body;
-
-      // Find user
-      const user = await User.findById(id).select("id");
+      const email = req.body.email.trim().toLowerCase();
+      const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {
-        const error = new Error("Miembro No Encontrado");
-        res.status(404).json({ error: error.message });
+        res.status(404).json({ error: "Usuario No Encontrado" });
         return;
       }
 
-      if (
-        req.project.team.some((team) => team.toString() === user.id.toString())
-      ) {
-        const error = new Error("Ya es miembro del equipo");
-        res.status(404).json({ error: error.message });
-        return;
-      }
-      req.project.team.push(user);
-      await req.project.save();
       res.status(200).json({
-        title: "Usuario agregado como miembro del equipo",
-        msg: user,
+        title: "Usuario Encontrado",
+        msg: serializePublicUser(user),
         error: false,
       });
     } catch (error) {
@@ -62,24 +27,80 @@ export class TeamMemberController {
       });
     }
   };
+
+  //region Add a member to a team
+  static addMemberById = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.body;
+      const user = await prisma.user.findUnique({ where: { id } });
+
+      if (!user) {
+        res.status(404).json({ error: "Miembro No Encontrado" });
+        return;
+      }
+
+      const memberExists = await prisma.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: req.project.id,
+            userId: user.id,
+          },
+        },
+      });
+
+      if (memberExists) {
+        res.status(404).json({ error: "Ya es miembro del equipo" });
+        return;
+      }
+
+      await prisma.projectMember.create({
+        data: {
+          projectId: req.project.id,
+          userId: user.id,
+        },
+      });
+
+      res.status(200).json({
+        title: "Usuario agregado como miembro del equipo",
+        msg: serializePublicUser(user),
+        error: false,
+      });
+    } catch (error) {
+      res.status(500).send({
+        msg: error.message,
+        title: "Error al validar el usuario",
+        error: true,
+      });
+    }
+  };
+
   //region removeMemberById
   static removeMemberById = async (req: Request, res: Response) => {
     try {
-      const { userId } = req.params;
-      //verificar si existe
+      const userId = req.params.userId as string;
+      const member = await prisma.projectMember.findUnique({
+        where: {
+          projectId_userId: {
+            projectId: req.project.id,
+            userId,
+          },
+        },
+      });
 
-      if (
-        !req.project.team.some((team) => team.toString() === userId.toString())
-      ) {
-        const error = new Error("Este usuario no es miembro del equipo");
-        res.status(404).json({ error: error.message });
+      if (!member) {
+        res.status(404).json({ error: "Este usuario no es miembro del equipo" });
         return;
       }
-      //remover miembro del equipo
-      req.project.team = req.project.team.filter(
-        (teamMember) => teamMember.toString() !== userId
-      );
-      await req.project.save();
+
+      await prisma.projectMember.delete({
+        where: {
+          projectId_userId: {
+            projectId: req.project.id,
+            userId,
+          },
+        },
+      });
+
       res.status(200).json({
         title: "Usuario eliminado del equipo",
         msg: userId,
@@ -93,20 +114,23 @@ export class TeamMemberController {
       });
     }
   };
+
   //region GetTeamProject
   static getTeamProject = async (req: Request, res: Response) => {
     try {
-      const project = await Project.findById(req.params.projectId)
-        .populate("team", "name email")
-        .select("team");
+      const project = await prisma.project.findUnique({
+        where: { id: req.params.projectId as string },
+        include: { team: { include: { user: true } } },
+      });
+
       if (!project) {
-        const error = new Error("Proyecto No Encontrado");
-        res.status(404).json({ error: error.message });
+        res.status(404).json({ error: "Proyecto No Encontrado" });
         return;
       }
+
       res.status(200).json({
         title: "Miembros del equipo",
-        msg: project.team,
+        msg: project.team.map((member) => serializePublicUser(member.user)),
         error: false,
       });
     } catch (error) {

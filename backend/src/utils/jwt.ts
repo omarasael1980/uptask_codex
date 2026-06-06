@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
-import mongoose, { Types } from "mongoose";
+
 type UserPayload = {
-  id: Types.ObjectId;
+  id: string;
 };
 export const generateToken = (payload: UserPayload) => {
   if (!process.env.JWT_SECRET) {
