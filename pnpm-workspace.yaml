@@ -1,0 +1,10 @@
+packages:
+  - "frontend"
+  - "backend"
+
+minimumReleaseAge: 1440
+strictDepBuilds: true
+onlyBuiltDependencies:
+  - "@swc/core"
+  - "bcrypt"
+  - "esbuild"

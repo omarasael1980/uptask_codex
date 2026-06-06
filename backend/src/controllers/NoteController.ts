@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import Note, { INote } from "../models/Note";
 import { Types } from "mongoose";
 type NoteParams = {
-  noteId: Types.ObjectId;
+  noteId: string;
 };
 //region createNote
 const createNote = async (req: Request<{}, {}, INote>, res: Response) => {
@@ -47,7 +47,10 @@ const getTasksNotes = async (req: Request, res: Response) => {
 };
 
 //region deleteNote
-const deleteNote = async (req: Request, res: Response): Promise<void> => {
+const deleteNote = async (
+  req: Request<NoteParams>,
+  res: Response
+): Promise<void> => {
   try {
     const noteId = new Types.ObjectId(req.params.noteId);
     const note = await Note.findById(noteId);

@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts"
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "6.0.0",
     "colors": "^1.4.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -18,7 +19,8 @@
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.5",
-    "nodemailer": "^6.10.0"
+    "nodemailer": "8.0.10",
+    "socket.io": "4.8.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

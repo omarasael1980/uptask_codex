@@ -1,0 +1,17 @@
+{
+  "name": "uptask",
+  "private": true,
+  "packageManager": "pnpm@10.16.0",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=10.16.0"
+  },
+  "scripts": {
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "build": "pnpm --filter frontend build",
+    "lint": "pnpm --filter frontend lint",
+    "typecheck": "pnpm --filter backend typecheck",
+    "audit": "pnpm audit --audit-level moderate"
+  }
+}
